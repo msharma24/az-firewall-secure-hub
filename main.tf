@@ -52,6 +52,4 @@ resource "azurerm_firewall" "firewall" {
   virtual_hub {
     virtual_hub_id = azurerm_virtual_hub.virtual_hub.id
   }
-
-
 }
