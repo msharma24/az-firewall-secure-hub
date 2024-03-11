@@ -80,6 +80,8 @@ resource "azurerm_subnet" "private_subnet_vnet1" {
   address_prefixes     = ["172.17.0.0/22"] #"10.0.1.0/24"]
 }
 
+
+
 #------------------------------------------------
 # Spoke Vnet 2
 # ------------------------------------------------
@@ -95,9 +97,9 @@ resource "azurerm_virtual_hub_connection" "spoke_vnet_vh_connection" {
   virtual_hub_id            = azurerm_virtual_hub.virtual_hub.id
   remote_virtual_network_id = azurerm_virtual_network.spoke_vnet.id
 
-  routing {
-    associated_route_table_id = azurerm_virtual_hub_route_table.spoke_route_table_vhub.id
-  }
+  # routing {
+  #   associated_route_table_id = azurerm_virtual_hub_route_table.spoke_route_table_vhub.id
+  # }
 
 }
 
@@ -106,9 +108,10 @@ resource "azurerm_virtual_hub_connection" "spoke_vnet_vh_connection_2" {
   virtual_hub_id            = azurerm_virtual_hub.virtual_hub.id
   remote_virtual_network_id = azurerm_virtual_network.spoke_vnet_2.id
 
-  routing {
-    associated_route_table_id = azurerm_virtual_hub_route_table.spoke_route_table_vhub.id
-  }
+
+  # routing {
+  #   associated_route_table_id = azurerm_virtual_hub_route_table.spoke_route_table_vhub.id
+  # }
 
 }
 
@@ -118,7 +121,23 @@ resource "azurerm_virtual_hub_connection" "spoke_vnet_vh_connection_2" {
 resource "azurerm_virtual_hub_route_table" "spoke_route_table_vhub" {
   name           = "${local.prefix}-spoke-route-table-vhub"
   virtual_hub_id = azurerm_virtual_hub.virtual_hub.id
-  labels         = ["label1"]
+  labels         = ["label1", "VNet"]
+
+  route {
+    name              = "spoke_route-to-fw"
+    destinations_type = "CIDR"
+    destinations      = ["10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16"]
+    next_hop_type     = "ResourceId"
+    next_hop          = azurerm_firewall.firewall.id
+  }
+
+  route {
+    name              = "Internet-to-Firewall"
+    destinations_type = "CIDR"
+    destinations      = ["0.0.0.0/0"]
+    next_hop_type     = "ResourceId"
+    next_hop          = azurerm_firewall.firewall.id
+  }
 
 }
 
@@ -133,33 +152,33 @@ resource "azurerm_virtual_hub_route_table" "firewall_spoke_route_table" {
 #------------------------------------------------
 # Virtual Hub Routing Intent
 # ------------------------------------------------
-resource "azurerm_virtual_hub_routing_intent" "vhub_routing_intent" {
-  name           = "${local.prefix}-vhub-routing-intent"
-  virtual_hub_id = azurerm_virtual_hub.virtual_hub.id
-
-  routing_policy {
-    name         = "PrivateTraffic"
-    destinations = ["Internet"]
-    next_hop     = azurerm_firewall.firewall.id
-  }
-
-  depends_on = [azurerm_firewall.firewall]
-
-}
-
-resource "azurerm_virtual_hub_routing_intent" "vhub_routing_intent_internet" {
-  name           = "${local.prefix}-vhub-routing-intent"
-  virtual_hub_id = azurerm_virtual_hub.virtual_hub.id
-
-  routing_policy {
-    name         = "InternetTraffic"
-    destinations = ["Internet"]
-    next_hop     = azurerm_firewall.firewall.id
-  }
-
-  depends_on = [azurerm_firewall.firewall, azurerm_virtual_hub_routing_intent.vhub_routing_intent]
-
-}
+# resource "azurerm_virtual_hub_routing_intent" "vhub_routing_intent" {
+#   name           = "${local.prefix}-vhub-routing-intent"
+#   virtual_hub_id = azurerm_virtual_hub.virtual_hub.id
+#
+#   routing_policy {
+#     name         = "PrivateTraffic"
+#     destinations = ["PrivateTraffic"]
+#     next_hop     = azurerm_firewall.firewall.id
+#   }
+#
+#   depends_on = [azurerm_firewall.firewall]
+#
+# }
+#
+# resource "azurerm_virtual_hub_routing_intent" "vhub_routing_intent_internet" {
+#   name           = "${local.prefix}-vhub-routing-intent"
+#   virtual_hub_id = azurerm_virtual_hub.virtual_hub.id
+#
+#   routing_policy {
+#     name         = "InternetTraffic"
+#     destinations = ["Internet"]
+#     next_hop     = azurerm_firewall.firewall.id
+#   }
+#
+#   depends_on = [azurerm_firewall.firewall, azurerm_virtual_hub_routing_intent.vhub_routing_intent]
+#
+# }
 
 
 resource "azurerm_virtual_hub_route_table_route" "spoke_rt_spoke_route" {
