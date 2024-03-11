@@ -66,13 +66,31 @@ resource "azurerm_virtual_network" "spoke_vnet" {
   name                = "${local.prefix}-spoke-vnet"
   location            = azurerm_resource_group.spoke_resource_group.location
   resource_group_name = azurerm_resource_group.spoke_resource_group.name
-  address_space       = ["172.16.0.0/12"]
+  address_space       = ["172.17.0.0/20"]
+}
+
+resource "azurerm_virtual_network" "spoke_vnet_2" {
+  name                = "${local.prefix}-spoke-vnet-2"
+  location            = azurerm_resource_group.spoke_resource_group.location
+  resource_group_name = azurerm_resource_group.spoke_resource_group.name
+  address_space       = ["172.24.16.0/20"]
 }
 
 resource "azurerm_virtual_hub_connection" "spoke_vnet_vh_connection" {
   name                      = "${local.prefix}-spoke-vnet-vh-connection"
   virtual_hub_id            = azurerm_virtual_hub.virtual_hub.id
   remote_virtual_network_id = azurerm_virtual_network.spoke_vnet.id
+
+  routing {
+    associated_route_table_id = azurerm_virtual_hub_route_table.spoke_route_table_vhub.id
+  }
+
+}
+
+resource "azurerm_virtual_hub_connection" "spoke_vnet_vh_connection_2" {
+  name                      = "${local.prefix}-spoke-vnet-vh-connection-2"
+  virtual_hub_id            = azurerm_virtual_hub.virtual_hub.id
+  remote_virtual_network_id = azurerm_virtual_network.spoke_vnet_2.id
 
   routing {
     associated_route_table_id = azurerm_virtual_hub_route_table.spoke_route_table_vhub.id
