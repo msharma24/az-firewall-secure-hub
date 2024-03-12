@@ -26,3 +26,7 @@ output "password" {
 
 }
 
+output "vnet_id" {
+  value = try(azurerm_virtual_network.azfw_vnet.id, null)
+
+}
