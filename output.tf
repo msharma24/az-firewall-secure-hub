@@ -21,18 +21,8 @@ output "virtual_wan_name" {
   value = azurerm_virtual_wan.virtual_wan.name
 }
 
+output "password" {
+  value = nonsensitive(random_password.password.result)
 
-
-
-
-
-
-
-
-
-
-
-
-
-
+}
 
