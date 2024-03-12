@@ -58,31 +58,53 @@ resource "azurerm_firewall" "firewall" {
 #------------------------------------------------
 # Spoke Networking
 # ------------------------------------------------
-resource "azurerm_resource_group" "dev_rg" {
-  name     = "${local.prefix}-dev-rg"
-  location = "australiaeast"
-}
+# resource "azurerm_resource_group" "resource_group" {
+#   name     = "${local.prefix}-dev-rg"
+#   location = "australiaeast"
+# }
 
-resource "azurerm_virtual_network" "dev_rg_vnet" {
+resource "azurerm_virtual_network" "resource_group_vnet" {
   name                = "${local.prefix}-dev-vnet"
-  location            = azurerm_resource_group.dev_rg.location
-  resource_group_name = azurerm_resource_group.dev_rg.name
+  location            = azurerm_resource_group.resource_group.location
+  resource_group_name = azurerm_resource_group.resource_group.name
   address_space       = ["172.17.0.0/20"]
 
 }
 
 resource "azurerm_subnet" "workload_subnet" {
   name                 = "${local.prefix}-workload-subnet"
-  resource_group_name  = azurerm_resource_group.dev_rg.name
-  virtual_network_name = azurerm_virtual_network.dev_rg_vnet.name
+  resource_group_name  = azurerm_resource_group.resource_group.name
+  virtual_network_name = azurerm_virtual_network.resource_group_vnet.name
   address_prefixes     = ["172.17.0.0/24"]
 
 }
 
+# create azurerm_route_table with internet route to firewall.id
+resource "azurerm_route_table" "workload_route_table" {
+  name                          = "${local.prefix}-workload-rt"
+  location                      = azurerm_resource_group.resource_group.location
+  resource_group_name           = azurerm_resource_group.resource_group.name
+  disable_bgp_route_propagation = false
+
+  # route {
+  #   name           = "Internet-to-Firewall"
+  #   address_prefix = "0.0.0.0/0"
+  #   next_hop_type  = "Internet"
+  #
+  # }
+
+}
+
+
+resource "azurerm_subnet_route_table_association" "workload_subnet_rt_association" {
+  subnet_id      = azurerm_subnet.workload_subnet.id
+  route_table_id = azurerm_route_table.workload_route_table.id
+}
+
 resource "azurerm_network_security_group" "nsg_worload" {
   name                = "${local.prefix}-workload-nsg"
-  location            = azurerm_resource_group.dev_rg.location
-  resource_group_name = azurerm_resource_group.dev_rg.name
+  location            = azurerm_resource_group.resource_group.location
+  resource_group_name = azurerm_resource_group.resource_group.name
 
   security_rule {
     name                       = "Allow-HTTP"
@@ -117,8 +139,8 @@ resource "azurerm_subnet_network_security_group_association" "workload_nsg_subne
 
 resource "azurerm_public_ip" "public_ip_workload_vm" {
   name                = "${local.prefix}-workload-pip"
-  location            = azurerm_resource_group.dev_rg.location
-  resource_group_name = azurerm_resource_group.dev_rg.name
+  location            = azurerm_resource_group.resource_group.location
+  resource_group_name = azurerm_resource_group.resource_group.name
   allocation_method   = "Dynamic"
   sku                 = "Basic"
 
@@ -126,8 +148,8 @@ resource "azurerm_public_ip" "public_ip_workload_vm" {
 
 resource "azurerm_network_interface" "linux_nic" {
   name                = "${local.prefix}-linux-nic"
-  location            = azurerm_resource_group.dev_rg.location
-  resource_group_name = azurerm_resource_group.dev_rg.name
+  location            = azurerm_resource_group.resource_group.location
+  resource_group_name = azurerm_resource_group.resource_group.name
   ip_configuration {
     name                          = "internal"
     subnet_id                     = azurerm_subnet.workload_subnet.id
@@ -140,8 +162,8 @@ resource "azurerm_network_interface" "linux_nic" {
 
 resource "azurerm_linux_virtual_machine" "workload_vm" {
   name                = "${local.prefix}-workload-vm"
-  location            = azurerm_resource_group.dev_rg.location
-  resource_group_name = azurerm_resource_group.dev_rg.name
+  location            = azurerm_resource_group.resource_group.location
+  resource_group_name = azurerm_resource_group.resource_group.name
   size                = "Standard_B1s"
   admin_username      = "adminuser"
   network_interface_ids = [
@@ -170,7 +192,8 @@ resource "azurerm_linux_virtual_machine" "workload_vm" {
 resource "azurerm_virtual_hub_connection" "vhub_vnet_connection" {
   name                      = "${local.prefix}-vhub-vnet-connection"
   virtual_hub_id            = azurerm_virtual_hub.virtual_hub.id
-  remote_virtual_network_id = azurerm_virtual_network.dev_rg_vnet.id
+  remote_virtual_network_id = azurerm_virtual_network.resource_group_vnet.id
+  internet_security_enabled = true
 
   routing {
     associated_route_table_id = azurerm_virtual_hub_route_table.vhub_route_table.id
