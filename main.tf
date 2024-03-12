@@ -172,6 +172,15 @@ resource "azurerm_virtual_hub_connection" "vhub_vnet_connection" {
   virtual_hub_id            = azurerm_virtual_hub.virtual_hub.id
   remote_virtual_network_id = azurerm_virtual_network.dev_rg_vnet.id
 
+  routing {
+    associated_route_table_id = azurerm_virtual_hub_route_table.vhub_route_table.id
+
+    propagated_route_table {
+      route_table_ids = [azurerm_virtual_hub_route_table.vhub_route_table.id]
+      labels          = ["Workload"]
+    }
+  }
+
 }
 
 #azurerm_virtual_hub_route_table
@@ -216,11 +225,11 @@ resource "azurerm_firewall_policy_rule_collection_group" "fw_policy_rule_collect
   priority           = 100
 
   application_rule_collection {
-    name     = "Allow-HTTP"
+    name     = "Deny-Bing.Com"
     action   = "Deny"
     priority = 100
     rule {
-      name = "Allow-HTTP"
+      name = "HTTP"
       protocols {
         type = "Http"
         port = "80"
