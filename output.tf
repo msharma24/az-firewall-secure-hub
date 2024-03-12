@@ -21,12 +21,8 @@ output "virtual_wan_name" {
   value = azurerm_virtual_wan.virtual_wan.name
 }
 
-output "password" {
-  value = nonsensitive(random_password.password.result)
 
-}
-
-output "vnet_id" {
-  value = try(azurerm_virtual_network.azfw_vnet.id, null)
+output "vm_ip" {
+  value = azurerm_linux_virtual_machine.workload_vm.public_ip_address
 
 }
